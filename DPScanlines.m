@@ -89,7 +89,6 @@ for y = 1 + (windowSize / 2) : size(im1,1) - (windowSize / 2)
     
     newScanline = zeros(1,size(dsi,1));
     
-    
     for zX = 1 : size(path,1)
         xLoc = path(zX,1);
         yLoc = path(zX,2);

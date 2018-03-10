@@ -1,3 +1,4 @@
+clear;
 filenames = dir('im*.png');
 filenames = sort({filenames.name});
 
@@ -12,32 +13,38 @@ im1 = data(:,:,1);
 im2 = data(:,:,2);
 windowSize = 32;
 
-disparity = zeros(size(im1,1) - (windowSize/2), 1);
+disparity = zeros(size(im1,1) - windowSize, size(im1,2) - windowSize);
 
-for y = 1 + (windowSize / 2) : size(im1,1) - (windowSize/2)
-
+for y = 1 + (windowSize / 2) : size(im1,1) - (windowSize / 2)
+    im2Descriptors = zeros(size(im1,1) - (windowSize/2), (windowSize^2) * 2);
+    disparityLine = zeros(1, size(im1,1) - (windowSize/2));
     for x = 1 + (windowSize / 2) : size(im1,2) - (windowSize/2)
-        [Gx, Gy] = imgradientxy(im1(y - (windowSize / 2) : y + (windowSize / 2), x - (windowSize /2)  : x + (windowSize / 2)));
-        f1Im1 = Gx(:);
-        f2Im1 = Gy(:);
+        subImage = im2(y - (windowSize / 2) : y + (windowSize / 2) - 1, x - (windowSize /2)  : x + (windowSize / 2) -1);
+        [Gx2, Gy2] = imgradientxy(subImage);
+        f1Im2 = Gx2(:);
+        f2Im2 = Gy2(:);
+        
+        descriptorIm2 = [f1Im2;f2Im2];
+        im2Descriptors(x,:) = descriptorIm2;
+    end
+    for x = 1 + (windowSize / 2) : size(im1,2) - (windowSize/2)
+        [Gx1, Gy1] = imgradientxy(im1(y - (windowSize / 2) : y + (windowSize / 2) -1, x - (windowSize /2)  : x + (windowSize / 2)-1));
+        f1Im1 = Gx1(:);
+        f2Im1 = Gy1(:);
         
         descriptorIm1 = [f1Im1;f2Im1];
-%        im1Descriptors(y,x,:) = descriptorIm1;
+        maxCorrelation = 0;
+        SSDs = zeros(1, size(im1,2) - windowSize);
         
-        for x1 = x : size(im1,2) - (windowSize/2)
-            [Gx, Gy] = imgradientxy(im2(y - (windowSize / 2) : y + (windowSize / 2), x1 - (windowSize /2)  : x1 + (windowSize / 2)));
-            f1Im2 = Gx(:);
-            f2Im2 = Gy(:);
-            
-            descriptorIm2 = [f1Im2;f2Im2];
-        %    im2Descriptors(y,x,:) = descriptorIm2;
-            
-            correlation = (1/(32*32)) * sum(sum((1 / (std2(descriptorIm1) * std2(descriptorIm2))) * ((descriptorIm1-mean(descriptorIm1)).*(descriptorIm2-mean(descriptorIm2)))));
-            
-            if (correlation >= maxCorrelation)
-                maxCorrelation = correlation;
-                disparity(y) = abs(x1 - x);
-            end
+        for x1 = 1 : size(im1,2) - windowSize
+            SSDs(x1) = sum((im2Descriptors(x1, :)' - descriptorIm1) .^2);
         end
+        
+        [val, loc] = min(SSDs);
+        disparityLine(x - (windowSize /2)) = abs(loc - x);
     end
+    disparity(y - (windowSize / 2) ,:) = disparityLine;
+    imshow(disparity./max(disparity));
 end
+
+imshow(disparity./max(disparity));
