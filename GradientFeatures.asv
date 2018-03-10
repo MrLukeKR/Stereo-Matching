@@ -1,0 +1,44 @@
+filenames = dir('im*.png');
+filenames = sort({filenames.name});
+
+im = imread(filenames{1});
+data = repmat(uint8(0),[size(im,1) size(im,2) length(filenames)]);
+
+for ii = 1:length(filenames)
+    data(:,:,ii) = rgb2gray(imread(filenames{ii}));
+end
+
+im1 = data(:,:,1);
+im2 = data(:,:,2);
+windowSize = 32;
+
+im1Descriptors = zeros(size(im1GradMag,1) - (windowSize/2), size(im1GradMag,1) - (windowSize/2), 2 * windowSize ^ 2);
+im2Descriptors = zeros(size(im1GradMag,1) - (windowSize/2), size(im1GradMag,1) - (windowSize/2), 2 * windowSize ^ 2);
+
+disparity = zeros(size(im1GradMag,1) - (windowSize/2), 1);
+
+for y = 1 + (windowSize / 2) : size(im1GradMag,1) - (windowSize/2)
+    for x = 1 + (windowSize / 2) : size(im1GradMag,2) - (windowSize/2)
+        [Gx, Gy] = imgradientxy(im1(y : y + 31, x : x + 31));
+        f1Im1 = Gx(:);
+        f2Im1 = Gy(:);
+        
+        descriptorIm1 = [fIm1;fIm2];
+        im1Descriptors(y,x,:) = descriptorIm1;
+        
+        correlation = 0;
+        minCorrelation = 0;
+        disparity = 0;
+        
+        for x1 = 1 + (windowSize / 2) : size(im1GradMag,2) - (windowSize/2)
+            [Gx, Gy] = imgradientxy(im2(y : y + 31, x1 : x1 + 31));
+            f1Im2 = Gx(:);
+            f2Im2 = Gy(:);
+            
+            descriptorIm2 = [f1Im2;f2Im2];
+            im2Descriptors(y,x,:) = descriptorIm2;
+            
+            correlation = (1/(32*32)) * sum(sum((1 / (std2(descriptorIm1) * std2(descriptorIm2))) * ((subArray-mean(subArray)).*(normalisedTemplate-mean(normalisedTemplate)))));
+        end
+    end
+end
