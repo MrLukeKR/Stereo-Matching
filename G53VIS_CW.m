@@ -1,8 +1,8 @@
 close all;
 clear;
 
-leftImage(:, :) = rgb2gray(imread('im2.png')); %Load in the left iamge
-rightImage(:, :) = rgb2gray(imread('im6.png')); %Load in the right iamge
+leftImage(:, :) = rgb2gray(imread('im2.png')); %Load in the left image
+rightImage(:, :) = rgb2gray(imread('im6.png')); %Load in the right image
 
 maxSearchSpace = 50;
 
@@ -24,10 +24,10 @@ end
 %figure('Name', 'Disparity from Speeded Up Robust Features (SURF) Feature Matching');
 %imshow(disp);
 
-for x = 2 : 5
+for x = 2 : 5    
     windowSize = 2 ^ x;
     disp = lbpToDisparity(leftImage, rightImage, windowSize);
-    figure('Name', 'Disparity from Loopy Belief Propagation(LBP) [%dx%d window]', windowSize, windowSize);
+    figure('Name', sprintf('Disparity from Loopy Belief Propagation(LBP) [%dx%d window]', windowSize, windowSize));
     imshow(disp);
 end
 
