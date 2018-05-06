@@ -1,32 +1,28 @@
 function disparity = lbpToDisparity(leftImage, rightImage, windowSize)
 width = size(leftImage,2);
 height = size(leftImage,1);
-labels = 50;
+labels = 15;
 
-propagations = 10;
+propagations = 40;
 
-messages = zeros(height, width, 5, labels);
+%messages = (struct)
+messages = zeros(height * width, 5, labels);
 disp = zeros(height, width);   
 
 progressBar = waitbar(0,  'Initialising Loopy Belief Propagation...');
 
-start = labels + windowSize / 2;
-yEnd = height - labels - windowSize / 2;
-xEnd = width - labels - windowSize / 2;
-mesWidth = xEnd - start;
+start = labels + 1;
+yEnd = height - labels;
+xEnd = width - labels;
 mesHeight = yEnd - start;
 
 data = Direction("CENTER");
-
-costs = zeros(height, width, labels);
-
-%imshow(messages(:,:,5,1)./max(max(messages(:,:,5,1))));
 
 for y = start : yEnd
     for x = start : xEnd
        for label = 1 : labels
            cost = DataCost(x, y, label - 1, leftImage, rightImage, windowSize);
-           messages(y, x, data, label) = cost;
+           messages((y-1) * width + x, data, label) = cost;
        end    
     end
     waitbar((y - start) / mesHeight, progressBar);
@@ -34,11 +30,7 @@ end
 
 close(progressBar);
 
-for i = 1 : labels
-   %imshow(messages(:,:,5,i)./max(max(messages(:,:,5,i))));
-end
-  
-    progressBar = waitbar(0,  'Performing Loopy Belief Propagation...');
+progressBar = waitbar(0,  'Performing Loopy Belief Propagation...');
     
 for belief = 1 : propagations
     for d = 1 : 4
@@ -46,9 +38,21 @@ for belief = 1 : propagations
         waitbar(((belief - 1) * 4 + d) / (propagations * 4), progressBar);
     end
     disp = Map(height, width, labels, disp, messages);
+    figure(1);
+    imshow(disp./max(max(disp)));
 end
 close(progressBar);
-disparity = disp./max(max(disp));
+disparity = AssignmentsToDisparity(disp, height, width, labels, windowSize);
+end
+
+function disparity = AssignmentsToDisparity(assignments, height, width, labels, windowSize)
+    disparity = zeros(height,width);
+    norm = max(max(assignments));
+    for y = labels + windowSize / 2 : height - labels - windowSize /2
+       for x = labels + windowSize / 2 : width - labels - windowSize / 2
+           disparity(y, x) = assignments(y, x) / norm; 
+       end
+    end
 end
 
 function dir = Direction(val)
@@ -75,7 +79,7 @@ switch(dir)
            end
         end
     case Direction("LEFT")
-        for x = width - 1 : -1 : 2
+        for x = width : -1 : 2
            for y = 1 : height
                messages = PassMessage(x, y, dir, labels, messages);
            end
@@ -88,7 +92,7 @@ switch(dir)
         end
     case Direction("UP")
         for x = 1 : width
-           for y = height - 1 : -1 : 2
+           for y = height : -1 : 2
                messages = PassMessage(x, y, dir, labels, messages);
            end
         end
@@ -101,67 +105,68 @@ function messages = PassMessage(x, y, dir, labels, messages)
 newMessage = zeros(labels, 1);
 %norm = 1;
 
+width = size(messages, 2);
+
 %checkMessageArray(messages);
 
 for i = 1 : labels
     cost = realmax;
     for j = 1 : labels
-        currCost = SmoothCost(i, j);
+        currCost = SmoothCost(i, j) + messages((y-1) * width + x, 5, j);
         
-        for d = 1 : 5
+        for d = 1 : 4
             if(dir ~= d) 
-                currCost = currCost + messages(y, x, d, j);
+                currCost = currCost + messages((y-1) * width + x, d, j);
             end
         end
+        
         cost = min(cost, currCost);
     end
     newMessage(i, 1) = cost;
+
 end
 
-for i = 1 : labels
 switch(dir)
     case Direction("LEFT")
-        messages(y, x - 1, Direction("RIGHT"), i) = newMessage(i, 1);
+        messages((y-1) * width + x - 1, Direction("RIGHT"), :) = newMessage(:, 1);
     case Direction("RIGHT")
-        messages(y, x + 1, Direction("LEFT"), i) = newMessage(i, 1);
+        messages((y-1) * width + x + 1, Direction("LEFT"), :) = newMessage(:, 1);
     case Direction("UP")
-        messages(y - 1, x, Direction("DOWN"), i) = newMessage(i, 1);
+        messages((y - 2) * width + x, Direction("DOWN"), :) = newMessage(:, 1);
     case Direction("DOWN")
-        messages(y + 1, x, Direction("UP"), i) = newMessage(i, 1);
+        messages(y * width + x, Direction("UP"), :) = newMessage(:, 1);
     otherwise
         warning('Invalid Direction');
 end
 end
-end
 
 function cost = DataCost(x, y, label, leftImage, rightImage, windowSize)
-        halfWindow = windowSize / 2;
-        yStartInd = y - halfWindow;
-        yEndInd = y + halfWindow -1;
-        xStartInd = x - halfWindow;
-        xEndInd = x + halfWindow -1;
+    halfWindow = windowSize / 2;
+    yStartInd = y - halfWindow + 1;
+    yEndInd = y + halfWindow;
+    xStartInd = x - halfWindow + 1;
+    xEndInd = x + halfWindow;
         
-        leftSubImage = leftImage(yStartInd : yEndInd , xStartInd : xEndInd);
-        rightSubImage = rightImage(yStartInd : yEndInd, xStartInd - label : xEndInd - label);
-        diff   = double(leftSubImage) - double(rightSubImage);
-        diffSq = diff .^2;
-        cost = sum(sum(diffSq));
+    leftSubImage = leftImage(yStartInd : yEndInd , xStartInd : xEndInd);
+    rightSubImage = rightImage(yStartInd : yEndInd, xStartInd - label : xEndInd - label);
+    diff   = double(leftSubImage) - double(rightSubImage);
+    diffSq = diff .^2;
+    cost = sum(sum(diffSq));
 end
 
-function disp = Map(height, width, labels, disp, messages)
-for y = 1 : height
-    for x = 1 : width
-        bestBelief = realmax;
-        for label = 1 : labels
-            belief = sum(messages(y, x, :, label));
-            if (belief < bestBelief)
-                bestBelief = belief; 
-                disp(y,x) = label - 1;
+function assignments = Map(height, width, labels, assignments, messages)
+    for y = 1 : height
+        for x = 1 : width
+            bestBelief = realmax;
+            for label = 1 : labels
+                belief = sum(messages((y - 1) * width + x, :, label));
+                if (belief < bestBelief)
+                    bestBelief = belief; 
+                    assignments(y,x) = label - 1;
+                end
             end
         end
     end
-end
-imshow(disp./max(max(disp)));
 end
 
 function cost = SmoothCost(x, y)
