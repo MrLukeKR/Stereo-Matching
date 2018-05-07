@@ -1,14 +1,9 @@
-function disparity = hogFeaturesToDisparity(leftImage, rightImage, windowSize, maxSearchSpace)
+function disparity = intensityToDisparity(leftImage, rightImage, windowSize, maxSearchSpace)
 width = size(leftImage,2);
 height = size(leftImage,1);
+featureSize = (windowSize ^ 2);
 
-progressBar = waitbar(0,  'Performing HOG Feature Matching...');
-
-cellSize = [windowSize/2 windowSize/2];
-leftSubImage   = leftImage (1 : windowSize, 1 : windowSize);
-leftDescriptor = extractHOGFeatures(leftSubImage,'CellSize', cellSize);
-
-featureSize = size(leftDescriptor, 2);
+progressBar = waitbar(0,  'Performing Pixel Intensity Matching...');
 
 disparity = zeros(height - windowSize, width - windowSize);
 
@@ -18,14 +13,11 @@ for y = 1 : height - windowSize
     disparityLine = zeros(1, width - windowSize);
     
     for x = 1 : width - windowSize
-        leftSubImage  = leftImage (y : y + windowSize - 1, x : x + windowSize - 1);
-        rightSubImage = rightImage(y : y + windowSize - 1, x : x + windowSize - 1);
-
-        leftDescriptor = extractHOGFeatures(leftSubImage,'CellSize', cellSize);
-        leftDescriptors(:,x) = leftDescriptor;
+        leftSubImage = leftImage(y : y + windowSize - 1, x : x + windowSize - 1);
+        leftDescriptors(:,x) = leftSubImage(:);
         
-        rightDescriptor = extractHOGFeatures(rightSubImage, 'CellSize', cellSize);
-        rightDescriptors(:,x) = rightDescriptor;
+        rightSubImage = rightImage(y : y + windowSize - 1, x : x + windowSize - 1);
+        rightDescriptors(:,x) = rightSubImage(:);
     end
     
     for rightX = 1 : width - windowSize
@@ -38,7 +30,7 @@ for y = 1 : height - windowSize
             diffSq = diff .^2;
             SSDs = [SSDs, sum(sum(diffSq))];
         end
-        
+            
         [val, loc] = min(SSDs);
         
         disparityLine(rightX) = loc;

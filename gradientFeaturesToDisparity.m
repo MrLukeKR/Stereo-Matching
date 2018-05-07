@@ -12,7 +12,7 @@ for y = 1 : height - windowSize
     rightDescriptors = zeros(featureSize, width - windowSize);
     disparityLine = zeros(1, width - windowSize);
     
-    parfor x = 1 : width - windowSize
+    for x = 1 : width - windowSize
         leftSubImage = leftImage(y : y + windowSize - 1, x : x + windowSize - 1);
         [ leftGx, leftGy ] = imgradientxy(leftSubImage);
         leftDescriptor = [ leftGx(:); leftGy(:) ];
@@ -24,7 +24,7 @@ for y = 1 : height - windowSize
         rightDescriptors(:,x) = rightDescriptor;
     end
     
-    parfor rightX = 1 : width - windowSize
+    for rightX = 1 : width - windowSize
         SSDs = [];
         
         bound = maxSearchSpace + windowSize;
